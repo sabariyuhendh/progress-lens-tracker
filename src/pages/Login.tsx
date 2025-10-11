@@ -15,7 +15,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!username || !password) {
@@ -27,19 +27,28 @@ const Login = () => {
       return;
     }
 
-    const success = login(username, password);
-    
-    if (success) {
-      const user = JSON.parse(localStorage.getItem('videoTracker_currentUser') || '{}');
-      if (user.role === 'admin') {
-        navigate('/admin');
+    try {
+      const success = await login(username, password);
+      
+      if (success) {
+        // Get current user to determine redirect
+        const currentUser = JSON.parse(localStorage.getItem('auth_token') || '{}');
+        if (currentUser.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/student');
+        }
       } else {
-        navigate('/student');
+        toast({
+          title: 'Login Failed',
+          description: 'Invalid username or password',
+          variant: 'destructive',
+        });
       }
-    } else {
+    } catch (error) {
       toast({
         title: 'Login Failed',
-        description: 'Invalid username or password',
+        description: 'An error occurred during login',
         variant: 'destructive',
       });
     }

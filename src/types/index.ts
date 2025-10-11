@@ -15,10 +15,10 @@ export interface Student {
 
 export interface AuthContextType {
   user: Student | null;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAdmin: boolean;
-  signup: (name: string, username: string, password: string) => { success: boolean; error?: string };
+  signup: (name: string, username: string, password: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export interface FolderProgress {

@@ -17,7 +17,7 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
@@ -39,18 +39,26 @@ const Signup = () => {
       return;
     }
 
-    const result = signup(name, username, password);
-    
-    if (result.success) {
-      toast({
-        title: 'Success',
-        description: 'Account created successfully! Welcome!',
-      });
-      navigate('/student');
-    } else {
+    try {
+      const result = await signup(name, username, password);
+      
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: 'Account created successfully! Welcome!',
+        });
+        navigate('/student');
+      } else {
+        toast({
+          title: 'Signup Failed',
+          description: result.error || 'An error occurred during signup',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
       toast({
         title: 'Signup Failed',
-        description: result.error || 'An error occurred during signup',
+        description: 'An error occurred during signup',
         variant: 'destructive',
       });
     }
