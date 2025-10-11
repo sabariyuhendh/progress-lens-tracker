@@ -97,14 +97,6 @@ export const initialStudents: Student[] = [
     completedVideos: [],
     lastUpdated: new Date().toISOString(),
   },
-  {
-    name: 'Sabari Yuhendhran',
-    username: 'sabari',
-    password: simpleHash('Sabari123'),
-    role: 'student',
-    completedVideos: ['1.1-1', '1.1-2', '1.2-1'],
-    lastUpdated: new Date().toISOString(),
-  },
 ];
 
 export const hashPassword = simpleHash;

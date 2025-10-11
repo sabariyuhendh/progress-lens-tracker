@@ -18,6 +18,7 @@ export interface AuthContextType {
   login: (username: string, password: string) => boolean;
   logout: () => void;
   isAdmin: boolean;
+  signup: (name: string, username: string, password: string) => { success: boolean; error?: string };
 }
 
 export interface FolderProgress {
@@ -25,4 +26,14 @@ export interface FolderProgress {
   total: number;
   completed: number;
   percentage: number;
+}
+
+export interface VideoFormData {
+  id: string;
+  folder: string;
+  title: string;
+}
+
+export interface FolderFormData {
+  name: string;
 }

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStudents, getVideos } from '@/utils/storage';
+import { getStudents, getVideos, deleteStudentAccount, resetStudentProgress } from '@/utils/storage';
 import { Student } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Users, Eye, Download } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { LogOut, Users, Eye, Download, Settings, Trash2, RotateCcw } from 'lucide-react';
 import { ProgressBar } from '@/components/ProgressBar';
 
 const AdminDashboard = () => {
@@ -15,6 +17,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const totalVideos = getVideos().length;
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -36,6 +39,28 @@ const AdminDashboard = () => {
 
   const handleViewDetails = (username: string) => {
     navigate(`/admin/student/${username}`);
+  };
+
+  const handleContentManagement = () => {
+    navigate('/admin/content');
+  };
+
+  const handleDeleteStudent = (student: Student) => {
+    deleteStudentAccount(student.username);
+    loadStudents();
+    toast({
+      title: 'Success',
+      description: `Student account "${student.name}" has been deleted`,
+    });
+  };
+
+  const handleResetProgress = (student: Student) => {
+    resetStudentProgress(student.username);
+    loadStudents();
+    toast({
+      title: 'Success',
+      description: `Progress reset for "${student.name}"`,
+    });
   };
 
   const handleExportCSV = () => {
@@ -69,10 +94,16 @@ const AdminDashboard = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleContentManagement}>
+                <Settings className="h-4 w-4 mr-2" />
+                Content Management
+              </Button>
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -145,14 +176,73 @@ const AdminDashboard = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleViewDetails(student.username)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleViewDetails(student.username)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="ghost" title="Reset Progress">
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Reset Student Progress</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to reset the progress for "{student.name}"? 
+                                  This will clear all {student.completedVideos.length} completed videos 
+                                  and set their progress back to 0%. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleResetProgress(student)}
+                                  className="bg-orange-600 text-white hover:bg-orange-700"
+                                >
+                                  Reset Progress
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="ghost" title="Delete Account">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Student Account</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to permanently delete the account for "{student.name}" ({student.username})? 
+                                  This will remove their account and all progress data. This action cannot be undone.
+                                  {student.completedVideos.length > 0 && (
+                                    <span className="block mt-2 text-destructive font-medium">
+                                      Warning: This student has completed {student.completedVideos.length} videos.
+                                    </span>
+                                  )}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteStudent(student)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete Account
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

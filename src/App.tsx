@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import StudentView from "./pages/StudentView";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminStudentView from "./pages/AdminStudentView";
+import AdminContentManagement from "./pages/AdminContentManagement";
+import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,8 +23,10 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/student" element={<StudentView />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/content" element={<AdminContentManagement />} />
             <Route path="/admin/student/:username" element={<AdminStudentView />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

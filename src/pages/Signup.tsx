@@ -6,40 +6,51 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, UserPlus } from 'lucide-react';
 
-const Login = () => {
+const Signup = () => {
+  const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const { signup } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username || !password) {
+    // Basic validation
+    if (!name.trim() || !username.trim() || !password || !confirmPassword) {
       toast({
         title: 'Error',
-        description: 'Please enter both username and password',
+        description: 'Please fill in all fields',
         variant: 'destructive',
       });
       return;
     }
 
-    const success = login(username, password);
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const result = signup(name, username, password);
     
-    if (success) {
-      const user = JSON.parse(localStorage.getItem('videoTracker_currentUser') || '{}');
-      if (user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/student');
-      }
+    if (result.success) {
+      toast({
+        title: 'Success',
+        description: 'Account created successfully! Welcome!',
+      });
+      navigate('/student');
     } else {
       toast({
-        title: 'Login Failed',
-        description: 'Invalid username or password',
+        title: 'Signup Failed',
+        description: result.error || 'An error occurred during signup',
         variant: 'destructive',
       });
     }
@@ -50,23 +61,33 @@ const Login = () => {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-4 text-center">
           <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-            <GraduationCap className="h-10 w-10 text-primary-foreground" />
+            <UserPlus className="h-10 w-10 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Student Video Progress Tracker</CardTitle>
+            <CardTitle className="text-2xl">Create Account</CardTitle>
             <CardDescription className="mt-2">
-              Sign in to track your learning progress
+              Join the learning community and track your progress
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Enter your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter your username"
+                placeholder="Choose a username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -76,20 +97,33 @@ const Login = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Must be at least 4 characters long
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
             <Button type="submit" className="w-full">
-              Sign In
+              Create Account
             </Button>
           </form>
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-primary hover:underline font-medium">
-                Sign up
+              Already have an account?{' '}
+              <Link to="/" className="text-primary hover:underline font-medium">
+                Sign in
               </Link>
             </p>
           </div>
@@ -99,4 +133,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;
