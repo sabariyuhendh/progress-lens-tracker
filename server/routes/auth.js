@@ -5,6 +5,20 @@ const pool = require('../db/connection');
 
 const router = express.Router();
 
+// Helper function to get user's completed video IDs
+async function getUserCompletedVideos(userId) {
+  try {
+    const result = await pool.query(
+      'SELECT video_id FROM user_progress WHERE user_id = $1',
+      [userId]
+    );
+    return result.rows.map(row => row.video_id);
+  } catch (error) {
+    console.error('Error fetching completed videos:', error);
+    return [];
+  }
+}
+
 // Register new user
 router.post('/register', async (req, res) => {
   try {
@@ -48,6 +62,9 @@ router.post('/register', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Get completed videos for new user (will be empty array)
+    const completedVideos = await getUserCompletedVideos(user.id);
+
     res.status(201).json({
       success: true,
       token,
@@ -55,7 +72,8 @@ router.post('/register', async (req, res) => {
         id: user.id,
         username: user.username,
         name: user.name,
-        role: user.role
+        role: user.role,
+        completedVideos
       }
     });
   } catch (error) {
@@ -98,6 +116,9 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Get completed videos for user
+    const completedVideos = await getUserCompletedVideos(user.id);
+
     res.json({
       success: true,
       token,
@@ -105,7 +126,8 @@ router.post('/login', async (req, res) => {
         id: user.id,
         username: user.username,
         name: user.name,
-        role: user.role
+        role: user.role,
+        completedVideos
       }
     });
   } catch (error) {
@@ -144,7 +166,16 @@ router.get('/me', verifyToken, async (req, res) => {
     }
 
     const user = result.rows[0];
-    res.json({ user });
+    
+    // Get completed videos for user
+    const completedVideos = await getUserCompletedVideos(user.id);
+    
+    res.json({ 
+      user: {
+        ...user,
+        completedVideos
+      }
+    });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Internal server error' });
