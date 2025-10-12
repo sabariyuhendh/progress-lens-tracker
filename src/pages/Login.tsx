@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,20 @@ import { GraduationCap } from 'lucide-react';
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/student');
+      }
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,13 +42,11 @@ const Login = () => {
       const success = await login(username, password);
       
       if (success) {
-        // Get current user to determine redirect
-        const currentUser = JSON.parse(localStorage.getItem('auth_token') || '{}');
-        if (currentUser.role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/student');
-        }
+        toast({
+          title: 'Success',
+          description: 'Login successful! Redirecting...',
+        });
+        // The useEffect will handle the redirect when user state updates
       } else {
         toast({
           title: 'Login Failed',
