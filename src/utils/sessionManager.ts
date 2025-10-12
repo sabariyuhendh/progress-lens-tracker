@@ -50,6 +50,14 @@ class SessionManager {
         if (session && this.isSessionValid(session)) {
           console.log('✅ Valid session found:', session.username);
           this.sessionData = session;
+          
+          // Ensure API service has the token
+          const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+          if (token) {
+            apiService.setToken(token, session.rememberMe);
+            console.log('🔑 Token restored for API service');
+          }
+          
           this.notifyListeners();
           await this.refreshSessionIfNeeded();
         } else {
@@ -126,8 +134,10 @@ class SessionManager {
     if (!this.sessionData) return false;
 
     try {
-      const response = await apiService.getCurrentUser(false);
+      console.log('🔄 Refreshing session for user:', this.sessionData.username);
+      const response = await apiService.getCurrentUser();
       if (response.user) {
+        console.log('✅ Session refreshed successfully');
         await this.updateSession({
           name: response.user.name,
           completedVideos: response.user.completedVideos || []
@@ -135,7 +145,7 @@ class SessionManager {
         return true;
       }
     } catch (error) {
-      console.error('Session refresh failed:', error);
+      console.error('❌ Session refresh failed:', error);
     }
     return false;
   }
@@ -169,11 +179,21 @@ class SessionManager {
   private async refreshSessionIfNeeded(): Promise<void> {
     if (!this.sessionData) return;
 
+    // Check if we have a token before trying to refresh
+    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+    if (!token) {
+      console.log('⚠️ No token found, skipping session refresh');
+      return;
+    }
+
     const now = Date.now();
     const timeUntilExpiry = this.sessionData.expiresAt - now;
 
     if (timeUntilExpiry < this.config.refreshThreshold) {
+      console.log('🔄 Session refresh needed, time until expiry:', timeUntilExpiry);
       await this.refreshSession();
+    } else {
+      console.log('✅ Session is still valid, no refresh needed');
     }
   }
 

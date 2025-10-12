@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ProgressBar } from '@/components/ProgressBar';
 import { SessionStatus } from '@/components/SessionStatus';
-import { BackendTest } from '@/components/BackendTest';
 import { LogOut, User, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -27,18 +26,25 @@ const StudentView = () => {
 
   useEffect(() => {
     const loadVideos = async () => {
+      if (!user) {
+        console.log('⏳ Waiting for user authentication...');
+        return;
+      }
+      
       try {
+        console.log('🔄 Loading videos for user:', user.username);
         const videosData = await apiService.getVideos();
+        console.log('✅ Videos loaded successfully:', videosData.length);
         setVideos(videosData);
       } catch (error) {
-        console.error('Failed to load videos:', error);
+        console.error('❌ Failed to load videos:', error);
       } finally {
         setLoading(false);
       }
     };
 
     loadVideos();
-  }, []);
+  }, [user]);
 
   const handleToggleVideo = async (videoId: string) => {
     const newCompleted = completedVideos.includes(videoId)
@@ -87,8 +93,17 @@ const StudentView = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <BackendTest />
-        <Card className="mb-6 shadow-md">
+        {loading ? (
+          <Card className="mb-6 shadow-md">
+            <CardContent className="p-8 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                <span>Loading your progress...</span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
@@ -112,11 +127,12 @@ const StudentView = () => {
           </CardContent>
         </Card>
 
-        <VideoChecklist
-          videos={videos}
-          completedVideos={completedVideos}
-          onToggleVideo={handleToggleVideo}
-        />
+          <VideoChecklist
+            videos={videos}
+            completedVideos={completedVideos}
+            onToggleVideo={handleToggleVideo}
+          />
+        )}
       </main>
     </div>
   );
