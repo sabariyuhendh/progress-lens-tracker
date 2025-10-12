@@ -19,7 +19,9 @@ app.use(cors({
     process.env.FRONTEND_URL || 'http://localhost:8080',
     'http://localhost:8081',
     'http://localhost:8080',
-    'https://progress-lens-tracker.onrender.com'
+    'https://progress-lens-tracker.onrender.com',
+    'https://progress-lens-tracker.vercel.app',
+    'https://data-science-tracker.vercel.app'
   ],
   credentials: true
 }));
