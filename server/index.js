@@ -41,6 +41,22 @@ app.use('/api/users', userRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/progress', progressRoutes);
 
+// Root API endpoint
+app.get('/api', (req, res) => {
+  res.json({ 
+    message: 'Progress Lens Tracker API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      videos: '/api/videos',
+      progress: '/api/progress'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -53,7 +69,7 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
