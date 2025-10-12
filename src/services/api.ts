@@ -1,11 +1,41 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? 'http://localhost:3001/api' : 'https://progress-lens-tracker-api.onrender.com/api');
+  (import.meta.env.DEV ? 'http://localhost:3001/api' : 'https://data-science-tracker.onrender.com/api');
 
 class ApiService {
   private token: string | null = null;
+  private userCache: any = null;
+  private cacheExpiry: number = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
+    this.initializeFromStorage();
+  }
+
+  private initializeFromStorage() {
+    // Try localStorage first (persistent across browser sessions)
     this.token = localStorage.getItem('auth_token');
+    
+    // If no token in localStorage, try sessionStorage (persistent across tabs)
+    if (!this.token) {
+      this.token = sessionStorage.getItem('auth_token');
+    }
+
+    // Load cached user data
+    const cachedUser = localStorage.getItem('cached_user');
+    const cacheTime = localStorage.getItem('user_cache_time');
+    
+    if (cachedUser && cacheTime) {
+      const cacheTimestamp = parseInt(cacheTime);
+      const now = Date.now();
+      
+      if (now - cacheTimestamp < this.CACHE_DURATION) {
+        this.userCache = JSON.parse(cachedUser);
+        this.cacheExpiry = cacheTimestamp + this.CACHE_DURATION;
+      } else {
+        // Cache expired, clear it
+        this.clearCache();
+      }
+    }
   }
 
   private async request<T>(
@@ -32,13 +62,43 @@ class ApiService {
     return response.json();
   }
 
-  setToken(token: string | null) {
+  setToken(token: string | null, persistent: boolean = true) {
     this.token = token;
     if (token) {
-      localStorage.setItem('auth_token', token);
+      if (persistent) {
+        // Store in localStorage for persistence across browser sessions
+        localStorage.setItem('auth_token', token);
+        // Also store in sessionStorage as backup
+        sessionStorage.setItem('auth_token', token);
+      } else {
+        // Store only in sessionStorage for session-only persistence
+        sessionStorage.setItem('auth_token', token);
+        localStorage.removeItem('auth_token');
+      }
     } else {
+      // Clear from both storage locations
       localStorage.removeItem('auth_token');
+      sessionStorage.removeItem('auth_token');
+      this.clearCache();
     }
+  }
+
+  private clearCache() {
+    this.userCache = null;
+    this.cacheExpiry = 0;
+    localStorage.removeItem('cached_user');
+    localStorage.removeItem('user_cache_time');
+  }
+
+  private setUserCache(user: any) {
+    this.userCache = user;
+    this.cacheExpiry = Date.now() + this.CACHE_DURATION;
+    localStorage.setItem('cached_user', JSON.stringify(user));
+    localStorage.setItem('user_cache_time', Date.now().toString());
+  }
+
+  private isCacheValid(): boolean {
+    return this.userCache && Date.now() < this.cacheExpiry;
   }
 
   // Auth methods
@@ -64,8 +124,29 @@ class ApiService {
     });
   }
 
-  async getCurrentUser() {
-    return this.request<{ user: { id: number; username: string; name: string; role: string } }>('/auth/me');
+  async getCurrentUser(useCache: boolean = true) {
+    // Return cached user if available and valid
+    if (useCache && this.isCacheValid()) {
+      return { user: this.userCache };
+    }
+
+    try {
+      const response = await this.request<{ user: { id: number; username: string; name: string; role: string } }>('/auth/me');
+      
+      // Cache the user data
+      if (response.user) {
+        this.setUserCache(response.user);
+      }
+      
+      return response;
+    } catch (error) {
+      // If API call fails but we have cached data, return cached data
+      if (this.userCache) {
+        console.warn('API call failed, returning cached user data');
+        return { user: this.userCache };
+      }
+      throw error;
+    }
   }
 
   // Video methods

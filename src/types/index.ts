@@ -15,7 +15,7 @@ export interface Student {
 
 export interface AuthContextType {
   user: Student | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   isAdmin: boolean;
   signup: (name: string, username: string, password: string) => Promise<{ success: boolean; error?: string }>;

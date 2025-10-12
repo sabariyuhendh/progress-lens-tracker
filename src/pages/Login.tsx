@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -39,12 +41,12 @@ const Login = () => {
     }
 
     try {
-      const success = await login(username, password);
+      const success = await login(username, password, rememberMe);
       
       if (success) {
         toast({
           title: 'Success',
-          description: 'Login successful! Redirecting...',
+          description: `Login successful! ${rememberMe ? 'You will stay logged in.' : 'Session will expire when you close the browser.'}`,
         });
         // The useEffect will handle the redirect when user state updates
       } else {
@@ -98,6 +100,16 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              />
+              <Label htmlFor="remember" className="text-sm font-normal">
+                Remember me
+              </Label>
             </div>
             <Button type="submit" className="w-full">
               Sign In
