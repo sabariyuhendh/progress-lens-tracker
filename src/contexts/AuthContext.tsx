@@ -38,10 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      console.log('🔐 Attempting login for:', username);
       const response = await apiService.login(username, password);
-      console.log('✅ Login response received:', response);
-      
       apiService.setToken(response.token);
       setUser({
         id: response.user.id.toString(),
@@ -52,11 +49,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         completedVideos: [],
         lastUpdated: new Date().toISOString(),
       });
-      console.log('✅ User state updated successfully');
       return true;
     } catch (error) {
-      console.error('❌ Login error:', error);
-      console.error('❌ Error details:', error.message);
+      console.error('Login error:', error);
       return false;
     }
   };
