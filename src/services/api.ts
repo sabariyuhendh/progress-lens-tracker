@@ -3,9 +3,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
 
 class ApiService {
   private token: string | null = null;
-  private userCache: any = null;
-  private cacheExpiry: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
     this.initializeFromStorage();
@@ -18,23 +15,6 @@ class ApiService {
     // If no token in localStorage, try sessionStorage (persistent across tabs)
     if (!this.token) {
       this.token = sessionStorage.getItem('auth_token');
-    }
-
-    // Load cached user data
-    const cachedUser = localStorage.getItem('cached_user');
-    const cacheTime = localStorage.getItem('user_cache_time');
-    
-    if (cachedUser && cacheTime) {
-      const cacheTimestamp = parseInt(cacheTime);
-      const now = Date.now();
-      
-      if (now - cacheTimestamp < this.CACHE_DURATION) {
-        this.userCache = JSON.parse(cachedUser);
-        this.cacheExpiry = cacheTimestamp + this.CACHE_DURATION;
-      } else {
-        // Cache expired, clear it
-        this.clearCache();
-      }
     }
   }
 
@@ -79,26 +59,7 @@ class ApiService {
       // Clear from both storage locations
       localStorage.removeItem('auth_token');
       sessionStorage.removeItem('auth_token');
-      this.clearCache();
     }
-  }
-
-  private clearCache() {
-    this.userCache = null;
-    this.cacheExpiry = 0;
-    localStorage.removeItem('cached_user');
-    localStorage.removeItem('user_cache_time');
-  }
-
-  private setUserCache(user: any) {
-    this.userCache = user;
-    this.cacheExpiry = Date.now() + this.CACHE_DURATION;
-    localStorage.setItem('cached_user', JSON.stringify(user));
-    localStorage.setItem('user_cache_time', Date.now().toString());
-  }
-
-  private isCacheValid(): boolean {
-    return this.userCache && Date.now() < this.cacheExpiry;
   }
 
   // Auth methods
@@ -106,7 +67,7 @@ class ApiService {
     return this.request<{
       success: boolean;
       token: string;
-      user: { id: number; username: string; name: string; role: string };
+      user: { id: number; username: string; name: string; role: string; completedVideos: string[] };
     }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ name, username, password }),
@@ -117,36 +78,15 @@ class ApiService {
     return this.request<{
       success: boolean;
       token: string;
-      user: { id: number; username: string; name: string; role: string };
+      user: { id: number; username: string; name: string; role: string; completedVideos: string[] };
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
   }
 
-  async getCurrentUser(useCache: boolean = true) {
-    // Return cached user if available and valid
-    if (useCache && this.isCacheValid()) {
-      return { user: this.userCache };
-    }
-
-    try {
-      const response = await this.request<{ user: { id: number; username: string; name: string; role: string } }>('/auth/me');
-      
-      // Cache the user data
-      if (response.user) {
-        this.setUserCache(response.user);
-      }
-      
-      return response;
-    } catch (error) {
-      // If API call fails but we have cached data, return cached data
-      if (this.userCache) {
-        console.warn('API call failed, returning cached user data');
-        return { user: this.userCache };
-      }
-      throw error;
-    }
+  async getCurrentUser() {
+    return this.request<{ user: { id: number; username: string; name: string; role: string; completedVideos: string[] } }>('/auth/me');
   }
 
   // Video methods

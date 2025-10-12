@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { AuthContextType, Student } from '@/types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Student, AuthContextType } from '@/types';
 import { apiService } from '@/services/api';
+import { sessionManager, SessionData } from '@/utils/sessionManager';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -9,79 +10,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // Try to get user from cache first (faster)
-        const cachedUser = localStorage.getItem('cached_user');
-        const cacheTime = localStorage.getItem('user_cache_time');
-        
-        if (cachedUser && cacheTime) {
-          const cacheTimestamp = parseInt(cacheTime);
-          const now = Date.now();
-          const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-          
-          if (now - cacheTimestamp < CACHE_DURATION) {
-            // Use cached user data immediately
-            const userData = JSON.parse(cachedUser);
-            setUser({
-              id: userData.id.toString(),
-              name: userData.name,
-              username: userData.username,
-              password: '',
-              role: userData.role as 'student' | 'admin',
-              completedVideos: [],
-              lastUpdated: new Date().toISOString(),
-            });
-            setLoading(false);
-            
-            // Verify with server in background
-            try {
-              const response = await apiService.getCurrentUser(false); // Skip cache
-              if (response.user) {
-                setUser({
-                  id: response.user.id.toString(),
-                  name: response.user.name,
-                  username: response.user.username,
-                  password: '',
-                  role: response.user.role as 'student' | 'admin',
-                  completedVideos: [],
-                  lastUpdated: new Date().toISOString(),
-                });
-              }
-            } catch (error) {
-              console.warn('Background auth verification failed, using cached data');
-            }
-            return;
-          }
-        }
-
-        // No valid cache, try to authenticate with server
-        const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
-        if (token) {
-          apiService.setToken(token);
-          const response = await apiService.getCurrentUser();
-          if (response.user) {
-            setUser({
-              id: response.user.id.toString(),
-              name: response.user.name,
-              username: response.user.username,
-              password: '',
-              role: response.user.role as 'student' | 'admin',
-              completedVideos: [],
-              lastUpdated: new Date().toISOString(),
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        // Clear invalid tokens
-        apiService.setToken(null);
-      } finally {
-        setLoading(false);
+    // Listen to session changes
+    const handleSessionChange = (session: SessionData | null) => {
+      if (session) {
+        setUser({
+          id: session.userId,
+          name: session.name,
+          username: session.username,
+          password: '',
+          role: session.role,
+          completedVideos: session.completedVideos,
+          lastUpdated: new Date().toISOString(),
+        });
+      } else {
+        setUser(null);
       }
+      setLoading(false);
     };
 
-    initAuth();
+    // Set initial state
+    const initialSession = sessionManager.getSession();
+    if (initialSession) {
+      setUser({
+        id: initialSession.userId,
+        name: initialSession.name,
+        username: initialSession.username,
+        password: '',
+        role: initialSession.role,
+        completedVideos: initialSession.completedVideos,
+        lastUpdated: new Date().toISOString(),
+      });
+    }
+    setLoading(false);
+
+    // Add session listener
+    sessionManager.addListener(handleSessionChange);
+
+    return () => {
+      sessionManager.removeListener(handleSessionChange);
+    };
   }, []);
 
   const login = async (username: string, password: string, rememberMe: boolean = true): Promise<boolean> => {
@@ -91,25 +58,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set token with persistence preference
       apiService.setToken(response.token, rememberMe);
       
-      // Create user object
-      const userData = {
+      // Create session
+      await sessionManager.createSession({
         id: response.user.id.toString(),
-        name: response.user.name,
         username: response.user.username,
-        password: '',
-        role: response.user.role as 'student' | 'admin',
-        completedVideos: [],
-        lastUpdated: new Date().toISOString(),
-      };
-      
-      setUser(userData);
-      
-      // Store additional session data
-      sessionStorage.setItem('user_session', JSON.stringify({
-        loginTime: Date.now(),
-        rememberMe,
-        lastActivity: Date.now()
-      }));
+        name: response.user.name,
+        role: response.user.role as 'admin' | 'student',
+        completedVideos: response.user.completedVideos || [],
+      }, rememberMe);
       
       return true;
     } catch (error) {
@@ -119,15 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    setUser(null);
+    sessionManager.clearSession();
     apiService.setToken(null);
-    
-    // Clear all session data
-    sessionStorage.removeItem('user_session');
-    sessionStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('cached_user');
-    localStorage.removeItem('user_cache_time');
   };
 
   const signup = async (name: string, username: string, password: string): Promise<{ success: boolean; error?: string }> => {
@@ -138,34 +87,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const response = await apiService.register(name, username, password);
       apiService.setToken(response.token);
-      setUser({
+      
+      // Create session
+      await sessionManager.createSession({
         id: response.user.id.toString(),
-        name: response.user.name,
         username: response.user.username,
-        password: '',
-        role: response.user.role as 'student' | 'admin',
-        completedVideos: [],
-        lastUpdated: new Date().toISOString(),
-      });
+        name: response.user.name,
+        role: response.user.role as 'admin' | 'student',
+        completedVideos: response.user.completedVideos || [],
+      }, true);
+      
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message || 'Registration failed' };
     }
   };
 
-  const isAdmin = user?.role === 'admin';
+  const value: AuthContextType = {
+    user,
+    login,
+    logout,
+    signup,
+    isAdmin: user?.role === 'admin',
+  };
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, signup }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

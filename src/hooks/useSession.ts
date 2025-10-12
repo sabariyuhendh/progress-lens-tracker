@@ -1,75 +1,50 @@
-import { useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { sessionManager, SessionData } from '@/utils/sessionManager';
 
 export const useSession = () => {
-  const updateLastActivity = useCallback(() => {
-    const sessionData = sessionStorage.getItem('user_session');
-    if (sessionData) {
-      const session = JSON.parse(sessionData);
-      session.lastActivity = Date.now();
-      sessionStorage.setItem('user_session', JSON.stringify(session));
-    }
-  }, []);
+  const [session, setSession] = useState<SessionData | null>(sessionManager.getSession());
+  const [loading, setLoading] = useState(true);
 
-  const checkSessionValidity = useCallback(() => {
-    const sessionData = sessionStorage.getItem('user_session');
-    if (!sessionData) return true;
-
-    const session = JSON.parse(sessionData);
-    const now = Date.now();
-    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-
-    // Check if session has expired
-    if (now - session.lastActivity > SESSION_TIMEOUT) {
-      // Clear expired session
-      sessionStorage.removeItem('user_session');
-      sessionStorage.removeItem('auth_token');
-      return false;
-    }
-
-    return true;
-  }, []);
-
-  const getSessionInfo = useCallback(() => {
-    const sessionData = sessionStorage.getItem('user_session');
-    if (!sessionData) return null;
-
-    return JSON.parse(sessionData);
-  }, []);
-
-  // Update activity on user interaction
   useEffect(() => {
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
-    const updateActivity = () => {
-      updateLastActivity();
+    // Set initial loading state
+    setLoading(false);
+
+    // Add listener for session changes
+    const handleSessionChange = (newSession: SessionData | null) => {
+      setSession(newSession);
+      setLoading(false);
     };
 
-    events.forEach(event => {
-      document.addEventListener(event, updateActivity, true);
-    });
+    sessionManager.addListener(handleSessionChange);
 
     return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, updateActivity, true);
-      });
+      sessionManager.removeListener(handleSessionChange);
     };
-  }, [updateLastActivity]);
+  }, []);
 
-  // Check session validity periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!checkSessionValidity()) {
-        // Session expired, redirect to login
-        window.location.href = '/login';
-      }
-    }, 60000); // Check every minute
+  const updateCompletedVideos = useCallback(async (completedVideos: string[]) => {
+    await sessionManager.updateCompletedVideos(completedVideos);
+  }, []);
 
-    return () => clearInterval(interval);
-  }, [checkSessionValidity]);
+  const refreshSession = useCallback(async () => {
+    return await sessionManager.refreshSession();
+  }, []);
+
+  const clearSession = useCallback(() => {
+    sessionManager.clearSession();
+  }, []);
 
   return {
-    updateLastActivity,
-    checkSessionValidity,
-    getSessionInfo
+    session,
+    loading,
+    isLoggedIn: sessionManager.isLoggedIn(),
+    userId: sessionManager.getUserId(),
+    userRole: sessionManager.getUserRole(),
+    completedVideos: sessionManager.getCompletedVideos(),
+    timeUntilExpiry: sessionManager.getTimeUntilExpiry(),
+    timeUntilInactivity: sessionManager.getTimeUntilInactivity(),
+    updateCompletedVideos,
+    refreshSession,
+    clearSession
   };
 };

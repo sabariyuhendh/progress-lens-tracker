@@ -1,19 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getVideos, updateStudent } from '@/utils/storage';
+import { useSession } from '@/hooks/useSession';
+import { apiService } from '@/services/api';
 import { VideoChecklist } from '@/components/VideoChecklist';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ProgressBar } from '@/components/ProgressBar';
+import { SessionStatus } from '@/components/SessionStatus';
 import { LogOut, User, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
 const StudentView = () => {
   const { user, logout } = useAuth();
+  const { completedVideos, updateCompletedVideos } = useSession();
   const navigate = useNavigate();
-  const [videos, setVideos] = useState(getVideos());
-  const [completedVideos, setCompletedVideos] = useState<string[]>(user?.completedVideos || []);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user || user.role !== 'student') {
@@ -21,14 +24,36 @@ const StudentView = () => {
     }
   }, [user, navigate]);
 
-  const handleToggleVideo = (videoId: string) => {
+  useEffect(() => {
+    const loadVideos = async () => {
+      try {
+        const videosData = await apiService.getVideos();
+        setVideos(videosData);
+      } catch (error) {
+        console.error('Failed to load videos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadVideos();
+  }, []);
+
+  const handleToggleVideo = async (videoId: string) => {
     const newCompleted = completedVideos.includes(videoId)
       ? completedVideos.filter(id => id !== videoId)
       : [...completedVideos, videoId];
+
+    // Update session immediately for responsive UI
+    await updateCompletedVideos(newCompleted);
     
-    setCompletedVideos(newCompleted);
-    if (user) {
-      updateStudent(user.username, { completedVideos: newCompleted });
+    // Update backend
+    try {
+      await apiService.updateUserProgress(videoId, !completedVideos.includes(videoId));
+    } catch (error) {
+      console.error('Failed to update progress:', error);
+      // Revert on error
+      await updateCompletedVideos(completedVideos);
     }
   };
 
@@ -49,10 +74,13 @@ const StudentView = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-foreground">My Learning Progress</h1>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-4">
+              <SessionStatus />
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
