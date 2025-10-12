@@ -42,19 +42,25 @@ class SessionManager {
   // Initialize session from storage
   private async initializeSession(): Promise<void> {
     try {
+      console.log('🔄 Initializing session...');
       const encryptedSession = this.getStoredSession();
       if (encryptedSession) {
+        console.log('📦 Found stored session, decrypting...');
         const session = this.decryptSession(encryptedSession);
         if (session && this.isSessionValid(session)) {
+          console.log('✅ Valid session found:', session.username);
           this.sessionData = session;
           this.notifyListeners();
           await this.refreshSessionIfNeeded();
         } else {
+          console.log('❌ Invalid session, clearing...');
           this.clearSession();
         }
+      } else {
+        console.log('📭 No stored session found');
       }
     } catch (error) {
-      console.error('Session initialization error:', error);
+      console.error('❌ Session initialization error:', error);
       this.clearSession();
     }
   }

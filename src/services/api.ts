@@ -23,6 +23,8 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
+    console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+    
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -33,13 +35,17 @@ class ApiService {
     };
 
     const response = await fetch(url, config);
+    console.log(`📡 API Response: ${response.status} ${response.statusText}`);
     
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Network error' }));
+      console.error(`❌ API Error:`, error);
       throw new Error(error.error || 'Request failed');
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log(`✅ API Success:`, data);
+    return data;
   }
 
   setToken(token: string | null, persistent: boolean = true) {

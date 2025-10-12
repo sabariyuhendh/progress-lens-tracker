@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ProgressBar } from '@/components/ProgressBar';
 import { SessionStatus } from '@/components/SessionStatus';
+import { BackendTest } from '@/components/BackendTest';
 import { LogOut, User, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -86,6 +87,7 @@ const StudentView = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
+        <BackendTest />
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
