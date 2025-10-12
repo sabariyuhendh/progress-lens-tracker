@@ -141,6 +141,13 @@ class ApiService {
     });
   }
 
+  async updateUserProgress(videoId: string, completed: boolean) {
+    return this.request<{ success: boolean }>(`/progress/${videoId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ completed }),
+    });
+  }
+
   async resetUserProgress(userId: number) {
     return this.request<{ success: boolean; message: string }>(`/progress/user/${userId}`, {
       method: 'DELETE',
