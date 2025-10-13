@@ -1,42 +1,27 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/RobustAuthContext";
+import { UserProvider } from "./contexts/UserContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import Index from "./pages/Index";
-import StudentView from "./pages/StudentView";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminStudentView from "./pages/AdminStudentView";
-import AdminContentManagement from "./pages/AdminContentManagement";
-import Signup from "./pages/Signup";
-import NotFound from "./pages/NotFound";
-
-const queryClient = new QueryClient();
+import SimpleLogin from "./pages/SimpleLogin";
+import SimpleStudentView from "./pages/SimpleStudentView";
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/student" element={<StudentView />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/content" element={<AdminContentManagement />} />
-              <Route path="/admin/student/:username" element={<AdminStudentView />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <TooltipProvider>
+      <UserProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<SimpleLogin />} />
+            <Route path="/student" element={<SimpleStudentView />} />
+            <Route path="*" element={<SimpleLogin />} />
+          </Routes>
+        </BrowserRouter>
+      </UserProvider>
+    </TooltipProvider>
   </ErrorBoundary>
 );
 
