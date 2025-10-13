@@ -13,16 +13,22 @@ class SimpleAuth {
   private listeners: Array<(user: User | null) => void> = [];
 
   constructor() {
-    this.initializeAuth();
+    // Initialize auth after a small delay to ensure everything is ready
+    setTimeout(() => {
+      this.initializeAuth();
+    }, 100);
   }
 
   private async initializeAuth() {
     try {
+      console.log('🔄 Initializing authentication...');
       const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
       if (token) {
+        console.log('🔑 Token found, setting up API service...');
         apiService.setToken(token);
         const response = await apiService.getCurrentUser();
         if (response.user) {
+          console.log('✅ User authenticated:', response.user.username);
           this.user = {
             id: response.user.id.toString(),
             username: response.user.username,
@@ -32,9 +38,11 @@ class SimpleAuth {
           };
           this.notifyListeners();
         }
+      } else {
+        console.log('📭 No token found, user not authenticated');
       }
     } catch (error) {
-      console.error('Auth initialization failed:', error);
+      console.error('❌ Auth initialization failed:', error);
       this.clearAuth();
     }
   }

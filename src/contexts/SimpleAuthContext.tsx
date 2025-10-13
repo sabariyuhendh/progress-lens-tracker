@@ -1,6 +1,5 @@
-import React, { createContext, useContext } from 'react';
-import { useSimpleAuth } from '@/hooks/useSimpleAuth';
-import { User } from '@/utils/simpleAuth';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { simpleAuth, User } from '@/utils/simpleAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -17,9 +16,56 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const auth = useSimpleAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+  useEffect(() => {
+    const handleUserChange = (newUser: User | null) => {
+      setUser(newUser);
+      setLoading(false);
+    };
+
+    // Set initial state
+    setUser(simpleAuth.getUser());
+    setLoading(false);
+
+    // Add listener
+    simpleAuth.addListener(handleUserChange);
+
+    return () => {
+      simpleAuth.removeListener(handleUserChange);
+    };
+  }, []);
+
+  const login = async (username: string, password: string, rememberMe: boolean = true) => {
+    return await simpleAuth.login(username, password, rememberMe);
+  };
+
+  const signup = async (name: string, username: string, password: string) => {
+    return await simpleAuth.signup(name, username, password);
+  };
+
+  const logout = () => {
+    simpleAuth.logout();
+  };
+
+  const updateCompletedVideos = async (videoId: string, completed: boolean) => {
+    return await simpleAuth.updateCompletedVideos(videoId, completed);
+  };
+
+  const value: AuthContextType = {
+    user,
+    loading,
+    isLoggedIn: simpleAuth.isLoggedIn(),
+    isAdmin: simpleAuth.isAdmin(),
+    completedVideos: simpleAuth.getCompletedVideos(),
+    login,
+    signup,
+    logout,
+    updateCompletedVideos
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
