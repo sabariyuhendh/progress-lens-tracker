@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/contexts/RobustAuthContext';
 import { apiService } from '@/services/api';
 import { VideoChecklist } from '@/components/VideoChecklist';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
