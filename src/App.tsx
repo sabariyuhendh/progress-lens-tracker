@@ -1,36 +1,28 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import Index from "./pages/Index";
-import StudentView from "./pages/StudentView";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminStudentView from "./pages/AdminStudentView";
-import NotFound from "./pages/NotFound";
-
-const queryClient = new QueryClient();
+import { UserProvider } from "./contexts/UserContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import SimpleLogin from "./pages/SimpleLogin";
+import SimpleStudentView from "./pages/SimpleStudentView";
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <ErrorBoundary>
     <TooltipProvider>
-      <AuthProvider>
+      <UserProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/student" element={<StudentView />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/student/:username" element={<AdminStudentView />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
+            <Route path="/" element={<SimpleLogin />} />
+            <Route path="/student" element={<SimpleStudentView />} />
+            <Route path="*" element={<SimpleLogin />} />
           </Routes>
         </BrowserRouter>
-      </AuthProvider>
+      </UserProvider>
     </TooltipProvider>
-  </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
